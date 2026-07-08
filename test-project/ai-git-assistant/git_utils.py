@@ -15,6 +15,8 @@ def _run_git(args):
             capture_output=True,
             text=True,
             check=True,
+            encoding="utf-8",
+            errors="replace",
         )
         return result.stdout
     except FileNotFoundError:
@@ -38,8 +40,8 @@ def get_git_status() -> str:
 
 def get_git_diff() -> str:
     """작업 트리(unstaged) + staged diff를 합쳐서 반환한다."""
-    unstaged = _run_git(["diff"])
-    staged = _run_git(["diff", "--cached"])
+    unstaged = _run_git(["diff"]) or ""       # ← None 방어
+    staged = _run_git(["diff", "--cached"]) or ""  # ← None 방어
     combined = ""
     if staged.strip():
         combined += "### Staged changes\n" + staged

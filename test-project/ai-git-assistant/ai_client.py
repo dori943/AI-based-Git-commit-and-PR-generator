@@ -38,6 +38,10 @@ def call_ai(prompt: str, model: str = DEFAULT_MODEL,
         "generationConfig": {
             "temperature": temperature,
             "maxOutputTokens": max_tokens,
+            # gemini-2.5 계열은 기본적으로 답변 전에 내부 추론(thinking)에
+            # 토큰을 먼저 소비한다. 이 예산도 max_tokens 안에서 차감되므로,
+            # thinking을 꺼서 모든 토큰이 실제 출력에 쓰이도록 한다.
+            "thinkingConfig": {"thinkingBudget": 0},
         },
     }
 
@@ -66,10 +70,13 @@ def call_ai(prompt: str, model: str = DEFAULT_MODEL,
             feedback = data.get("promptFeedback", {})
             raise AIClientError(f"API 응답에 결과가 없습니다. 사유: {feedback}")
 
+        finish_reason = candidates[0].get("finishReason", "")
         parts = candidates[0].get("content", {}).get("parts", [])
         text = "\n".join(p.get("text", "") for p in parts).strip()
         if not text:
-            raise AIClientError("API 응답에서 텍스트를 찾을 수 없습니다.")
+            raise AIClientError(f"API 응답에서 텍스트를 찾을 수 없습니다. (finishReason={finish_reason})")
+        if finish_reason == "MAX_TOKENS":
+            text += f"\n\n[경고] 응답이 max_tokens({max_tokens}) 제한으로 중간에 잘렸습니다. --max-tokens 값을 늘려보세요."
         return text
     except (KeyError, IndexError) as e:
         raise AIClientError(f"API 응답 파싱 실패: {e}")

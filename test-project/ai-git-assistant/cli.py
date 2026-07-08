@@ -32,6 +32,8 @@ def build_parser():
                         help=f"최대 생성 토큰 수 (기본값: {DEFAULT_MAX_TOKENS})")
         p.add_argument("--safe-mode", action="store_true",
                         help="diff 전송 전 민감정보 마스킹 + 최대 10개 파일/200줄로 제한")
+        p.add_argument("--debug", action="store_true",
+                        help="AI의 원본(raw) 응답 텍스트를 그대로 출력 (파싱 문제 진단용)")
 
     commit_parser = subparsers.add_parser("commit", help="커밋 메시지 생성")
     add_common_options(commit_parser)
@@ -85,6 +87,11 @@ def run_pr(args):
         print(f"[오류] {e}")
         sys.exit(1)
 
+    if args.debug:
+        print("\n----- [DEBUG] 1차 원본 응답 -----")
+        print(raw_text)
+        print("----- [DEBUG] 끝 -----\n")
+
     validated = validate_pr(raw_text)
 
     # Why/What/How to Test 중 하나라도 불릿이 없으면 1회 한정 재시도 (최대 2회 호출)
@@ -94,6 +101,10 @@ def run_pr(args):
         try:
             raw_text_retry = call_ai(retry_prompt, model=args.model, temperature=args.temperature, max_tokens=args.max_tokens)
             call_count += 1
+            if args.debug:
+                print("\n----- [DEBUG] 재시도 원본 응답 -----")
+                print(raw_text_retry)
+                print("----- [DEBUG] 끝 -----\n")
             retry_validated = validate_pr(raw_text_retry)
             # 재시도 결과가 더 낫다면 교체
             if retry_validated["all_sections_ok"] or not validated["all_sections_ok"]:
