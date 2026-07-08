@@ -1,0 +1,3 @@
+requests>=2.31.0
+# 참고: Google 공식 SDK(google-genai)를 쓰고 싶다면 아래를 추가로 설치해도 됩니다.
+# google-genai>=0.1.0
